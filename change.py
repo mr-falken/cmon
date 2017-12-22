@@ -46,28 +46,28 @@ def getCurrencies():
 	return r
 
 
-def sendToInflux(msg):
+def sendToInflux(currency, msg):
+	vals = {}
 	for v in msg["result"]:
-		json_body = [
-			{
-				"measurement": "coins",
-				"tags": {
-					"from": v["from"],
-					"to": v["to"],
-				},
-				"time": int(time.time()),
-				"fields": {
-					"value": float(v["result"]),
-				}
-			}
-		]
-		params = {"precision": "s"}
-		client.write_points(json_body, time_precision='s')
+		vals[v["to"]] = float(v["result"])
+
+	json_body = [
+		{
+			"measurement": "coins",
+			"tags": {
+				"from": currency,
+			},
+			"time": int(time.time()),
+			"fields": vals,
+		}
+	]
+	params = {"precision": "s"}
+	client.write_points(json_body, time_precision='s')
 
 influx_host = os.environ['INFLUXDB_HOST']
 influx_port = os.environ['INFLUXDB_PORT']
 influx_db = os.environ['INFLUXDB_DB']
-interval = 120
+interval = 60
 
 print("Connecting to influxdb at {0}".format(influx_host))
 client = InfluxDBClient(influx_host, influx_port, '', '', influx_db)
@@ -77,6 +77,6 @@ currencies = getCurrencies()['result']
 while (1): 
 	resp = getEstimatedRates('btc', 1.0, currencies)
 	print(resp)
-	sendToInflux(resp)
+	sendToInflux('btc', resp)
 	time.sleep(interval)
 
